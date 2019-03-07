@@ -22,12 +22,16 @@
 #if _MSC_VER
 #define THREADLOCAL __declspec(thread)
 #define INLINE static inline __forceinline
+#define INLINE_DECL
+#define INLINE_DEFN static inline __forceinline
 #define NOINLINE __declspec(noinline)
 #endif
 
 #if __GNUC__
 #define THREADLOCAL __thread
-#define INLINE static inline __attribute__((always_inline))
+#define INLINE inline __attribute__((always_inline))
+#define INLINE_DECL static
+#define INLINE_DEFN static inline __attribute__((always_inline))
 #define NOINLINE __attribute__((noinline))
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvarargs"
@@ -63,13 +67,13 @@ typedef struct Allocator {
     FreeFunc free;
 } Allocator;
 
-INLINE
+INLINE_DEFN
 void *default_alloc(void *allocator, size_t size, size_t align) {
     // todo: use _aligned_malloc, etc
     return malloc(size);
 }
 
-INLINE
+INLINE_DEFN
 void default_free(void *allocator, void *ptr) {
     // todo: use _aligned_free, etc
     free(ptr);
@@ -78,7 +82,7 @@ void default_free(void *allocator, void *ptr) {
 THREADLOCAL
 Allocator *current_allocator = &(Allocator){default_alloc, default_free};
 
-INLINE
+INLINE_DEFN
 void *generic_alloc(Allocator *allocator, size_t size, size_t align) {
     if (!size) {
         return 0;
@@ -89,7 +93,7 @@ void *generic_alloc(Allocator *allocator, size_t size, size_t align) {
     return allocator->alloc(allocator, size, align);
 }
 
-INLINE
+INLINE_DEFN
 void generic_free(Allocator *allocator, void *ptr) {
     if (!allocator) {
         allocator = current_allocator;
@@ -97,7 +101,7 @@ void generic_free(Allocator *allocator, void *ptr) {
     allocator->free(allocator, ptr);
 }
 
-INLINE
+INLINE_DEFN
 void *generic_alloc_copy(Allocator *allocator, size_t size, size_t align, const void *src) {
     if (!allocator) {
         allocator = current_allocator;

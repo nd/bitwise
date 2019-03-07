@@ -254,7 +254,7 @@ char *typespec_to_cdecl(Typespec *typespec, const char *str) {
     }
 }
 
-void gen_func_decl(Decl *decl) {
+void gen_func_decl(Decl *decl, bool isdecl) {
     assert(decl->kind == DECL_FUNC);
     char *result = NULL;
     buf_printf(result, "%s(", get_gen_name(decl));
@@ -274,6 +274,9 @@ void gen_func_decl(Decl *decl) {
     }
     buf_printf(result, ")");
     gen_sync_pos(decl->pos);
+    if (isdecl && get_decl_note(decl, inline_name)) {
+      genlnf("INLINE_DECL");
+    }
     if (decl->func.ret_type) {
         genlnf("%s", type_to_cdecl(incomplete_decay(get_resolved_type(decl->func.ret_type)), result));
     } else {
@@ -1105,10 +1108,10 @@ void gen_decl(Sym *sym) {
         genf(")");
         break;
     case DECL_VAR:
-        if (is_decl_threadlocal(decl)) {
-            genlnf("THREADLOCAL");
-        }
         genlnf("extern ");
+        if (is_decl_threadlocal(decl)) {
+            genlnf("THREADLOCAL ");
+        }
         if (decl->var.type && !is_incomplete_array_typespec(decl->var.type)) {
             genf("%s", typespec_to_cdecl(decl->var.type, get_gen_name(sym)));
         } else {
@@ -1117,7 +1120,7 @@ void gen_decl(Sym *sym) {
         genf(";");
         break;
     case DECL_FUNC:
-        gen_func_decl(decl);
+        gen_func_decl(decl, true);
         genf(";");
         break;
     case DECL_STRUCT:
@@ -1180,12 +1183,12 @@ void gen_defs(void) {
                 gen_buf = NULL;
             }
             if (get_decl_note(decl, inline_name)) {
-                genlnf("INLINE");
+                genlnf("INLINE_DEFN");
             }
             if (get_decl_note(decl, str_intern("noinline"))) {
                 genlnf("NOINLINE");
             }
-            gen_func_decl(decl);
+            gen_func_decl(decl, false);
             genf(" ");
             gen_stmt_block(decl->func.block);
             genln();
