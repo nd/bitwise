@@ -183,11 +183,7 @@ Expr *parse_expr_operand(void) {
     } else if (is_token(TOKEN_NAME)) {
         const char *name = token.name;
         next_token();
-        if (is_token(TOKEN_LBRACE)) {
-            return parse_expr_compound(new_typespec_name(pos, &name, 1));
-        } else {
-            return new_expr_name(pos, name);
-        }
+        return new_expr_name(pos, name);
     } else if (match_keyword(new_keyword)) {
         return parse_expr_new(pos);
     } else if (match_keyword(sizeof_keyword)) {
@@ -254,7 +250,7 @@ Expr *parse_expr_operand(void) {
 
 Expr *parse_expr_base(void) {
     Expr *expr = parse_expr_operand();
-    while (is_token(TOKEN_LPAREN) || is_token(TOKEN_LBRACKET) || is_token(TOKEN_DOT) || is_token(TOKEN_INC) || is_token(TOKEN_DEC)) {
+    while (is_token(TOKEN_LPAREN) || is_token(TOKEN_LBRACKET) || is_token(TOKEN_DOT) || is_token(TOKEN_INC) || is_token(TOKEN_DEC) || is_token(TOKEN_LBRACE)) {
         SrcPos pos = token.pos;
         if (match_token(TOKEN_LPAREN)) {
             Expr **args = NULL;
@@ -275,6 +271,39 @@ Expr *parse_expr_base(void) {
             const char *field = token.name;
             expect_token(TOKEN_NAME);
             expr = new_expr_field(pos, expr, field);
+        } else if (is_token(TOKEN_LBRACE)) {
+            if (expr->kind == EXPR_NAME) {
+                const char *name = expr->name;
+                expr = parse_expr_compound(new_typespec_name(pos, &name, 1));
+            } else if (expr->kind == EXPR_FIELD) {
+                // collect all names
+                Expr *e = expr;
+                const char **names = NULL;
+                while (e->kind == EXPR_FIELD) {
+                    buf_push(names, e->field.name);
+                    e = e->field.expr;
+                }
+                if (e->kind == EXPR_NAME) {
+                    buf_push(names, e->name);
+                } else {
+                    break;
+                }
+
+                // reverse: names are from last to first
+                int i1 = 0;
+                int i2 = buf_len(names) - 1;
+                while (i1 < i2) {
+                    const char* tmp = names[i1];
+                    names[i1] = names[i2];
+                    names[i2] = tmp;
+                    i1++;
+                    i2--;
+                }
+
+                expr = parse_expr_compound(new_typespec_name(pos, names, buf_len(names)));
+            } else {
+                break;
+            }
         } else {
             assert(is_token(TOKEN_INC) || is_token(TOKEN_DEC));
             TokenKind op = token.kind;
