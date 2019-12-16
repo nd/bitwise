@@ -2777,20 +2777,24 @@ void postinit_builtin(void) {
 void add_package_decls(Package *package) {
     for (size_t i = 0; i < package->num_decls; i++) {
         Decl *decl = package->decls[i];
-        if (decl->kind == DECL_NOTE) {
+        if (decl->kind == DECL_NOTE && decl->note.name == declare_note_name) {
+            if (decl->note.num_args != 1) {
+                fatal_error(decl->pos, "#declare_note takes 1 argument");
+            }
+            Expr *arg = decl->note.args[0].expr;
+            if (arg->kind != EXPR_NAME) {
+                fatal_error(decl->pos, "#declare_note argument must be name");
+            }
+            map_put(&decl_note_names, arg->name, (void *) 1);
+        }
+    }
+    for (size_t i = 0; i < package->num_decls; i++) {
+        Decl *decl = package->decls[i];
+        if (decl->kind == DECL_NOTE && decl->note.name != declare_note_name) {
             if (!map_get(&decl_note_names, decl->note.name)) {
                 warning(decl->pos, "Unknown declaration #directive '%s'", decl->note.name);
             }
-            if (decl->note.name == declare_note_name) {
-                if (decl->note.num_args != 1) {
-                    fatal_error(decl->pos, "#declare_note takes 1 argument");
-                }
-                Expr *arg = decl->note.args[0].expr;
-                if (arg->kind != EXPR_NAME) {
-                    fatal_error(decl->pos, "#declare_note argument must be name");
-                }
-                map_put(&decl_note_names, arg->name, (void *)1);
-            } else if (decl->note.name == static_assert_name) {
+            if (decl->note.name == static_assert_name) {
                 // TODO: decide how to handle top-level static asserts wrt laziness/tree shaking
                 if (!flag_lazy) {
                     resolve_static_assert(decl->note);
