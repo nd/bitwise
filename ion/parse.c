@@ -888,10 +888,16 @@ Decl *parse_decl_note(SrcPos pos) {
 Decl *parse_decl_import(SrcPos pos) {
     const char *rename_name = NULL;
     bool is_relative;
+    bool is_dot_import = false;
     repeat:
     is_relative = false;
     if (match_token(TOKEN_DOT)) {
-        is_relative = true;
+        if (!rename_name && is_token(TOKEN_ASSIGN)) {
+            is_dot_import = true;
+            next_token();
+        } else {
+            is_relative = true;
+        }
     }
     const char *name = token.name;
     expect_token(TOKEN_NAME);
@@ -928,7 +934,7 @@ Decl *parse_decl_import(SrcPos pos) {
         }
         expect_token(TOKEN_RBRACE);
     }
-    return new_decl_import(pos, rename_name, is_relative, names, buf_len(names), import_all, items, buf_len(items));
+    return new_decl_import(pos, rename_name, is_relative, names, buf_len(names), import_all, items, buf_len(items), is_dot_import);
 }
 
 Decl *parse_decl_opt(void) {

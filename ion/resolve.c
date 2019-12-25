@@ -2880,6 +2880,16 @@ void import_package_symbols(Decl *decl, Package *package) {
     }
 }
 
+void check_imported_package_symbols_exist(Decl *decl, Package *package) {
+    for (size_t i = 0; i < decl->import.num_items; i++) {
+        ImportItem item = decl->import.items[i];
+        Sym *sym = get_package_sym(package, item.name);
+        if (!sym) {
+            fatal_error(decl->pos, "Symbol '%s' does not exist in package '%s'", item.name, package->path);
+        }
+    }
+}
+
 void process_package_imports(Package *package) {
     for (size_t i = 0; i < package->num_decls; i++) {
         Decl *decl = package->decls[i];
@@ -2903,9 +2913,13 @@ void process_package_imports(Package *package) {
                 fatal_error(decl->pos, "Failed to import package '%s'", path_buf);
             }
             buf_free(path_buf);
-            import_package_symbols(decl, imported_package);
-            if (decl->import.import_all) {
-                import_all_package_symbols(imported_package);
+            if (decl->import.is_dot_import) {
+                import_package_symbols(decl, imported_package);
+                if (decl->import.import_all) {
+                    import_all_package_symbols(imported_package);
+                }
+            } else {
+                check_imported_package_symbols_exist(decl, imported_package);
             }
             const char *sym_name = decl->name ? decl->name : decl->import.names[decl->import.num_names - 1];
             Sym *sym = sym_new(SYM_PACKAGE, sym_name, decl);

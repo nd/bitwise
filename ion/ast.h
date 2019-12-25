@@ -159,6 +159,7 @@ struct Decl {
         } const_decl;
         struct {
             bool is_relative;
+            bool is_dot_import; // whether symbols should be copied into the current package namespace
             const char **names;
             size_t num_names;
             bool import_all;

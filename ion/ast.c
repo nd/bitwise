@@ -180,7 +180,7 @@ Decl *new_decl_note(SrcPos pos, Note note) {
     return d;
 }
 
-Decl *new_decl_import(SrcPos pos, const char *rename_name, bool is_relative, const char **names, size_t num_names, bool import_all, ImportItem *items, size_t num_items) {
+Decl *new_decl_import(SrcPos pos, const char *rename_name, bool is_relative, const char **names, size_t num_names, bool import_all, ImportItem *items, size_t num_items, bool is_dot_import) {
     Decl *d = new_decl(DECL_IMPORT, pos, NULL);
     d->name = rename_name;
     d->import.is_relative = is_relative;
@@ -189,6 +189,7 @@ Decl *new_decl_import(SrcPos pos, const char *rename_name, bool is_relative, con
     d->import.import_all = import_all;
     d->import.items = AST_DUP(items);
     d->import.num_items = num_items;
+    d->import.is_dot_import = is_dot_import;
     return d;
 }
 
